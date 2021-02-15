@@ -1,1 +1,4 @@
 stack.yaml.lock
+.DS_Store
+.stack-work/
+.stack-work/stack.sqlite3
