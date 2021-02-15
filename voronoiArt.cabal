@@ -21,4 +21,6 @@ executable voronoiArt
                        JuicyPixels >= 3.2.7,
                        filepath    >= 1.3,
                        random,
-                       array
+                       array,
+                       queue,
+                       containers
