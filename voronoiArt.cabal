@@ -23,4 +23,5 @@ executable voronoiArt
                        random,
                        array,
                        queue,
-                       containers
+                       containers,
+                       primitive >= 0.7.0.0
