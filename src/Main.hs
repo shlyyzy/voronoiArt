@@ -11,8 +11,11 @@ import Data.Queue
 import qualified Data.Sequence as Seq
 import Control.Monad
 import Control.Monad.Primitive
+import Data.Map (Map)
+import qualified Data.Map as Map
 
--- :set args "/Users/Shirley/Desktop/voronoiArt/img/img1.JPG"
+-- :set args "/Users/Shirley/Desktop/voronoiArt/img/img1.JPG" "/Users/Shirley/Desktop/voronoiArt/img/img1out.JPG"
+-- :set args "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img1.JPG" "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img1-out.JPG"
 -- data Point x y () = Point 
 data Point = Point Int Int (Int, Int)
       deriving (Show)
@@ -42,44 +45,134 @@ generateCentres n inImg =
     r2 <- rand 100000
     let rs = genRandomNumbersBetween n r1 (0,(imageWidth inImg))
     let ms = genRandomNumbersBetween n r2 (0,(imageHeight inImg))
+    -- let rs = genRandomNumbersBetween n r1 (0,50)
+    -- let ms = genRandomNumbersBetween n r2 (0,50)
     let both = Prelude.zip rs ms
     let output = [(Point x y (x,y)) | (x,y) <- both]
     return (output)
 
 -- generateValidNeighbours :: Point -> [Point] -> Int -> Int -> [Point]
+generateValidNeighbours :: Point -> Map (Int, Int) Bool -> Int -> Int -> [Point]
 generateValidNeighbours (Point x y (cx, cy)) processed w h =
   do
-    -- might be best to test if point is valid before generating
-      -- add to processed?
     let temp = [(x+1,y), (x-1, y), (x,y+1), (x, y-1)]
     let valid = [Point tx ty (cx, cy) | (tx,ty) <- temp, (isValid tx ty w h processed)]
     -- let temp = [(1,2), (3, 4), (5,6), (7, 8)]
     -- let valid = [Point tx ty (cx, cy) | (tx,ty) <- temp]
-    return (valid)
+    valid
 
 --isValid :: Int -> Int -> Int -> Int -> [Point] -> Boolean
+isValid :: Int -> Int -> Int -> Int -> Map (Int, Int) Bool -> Bool
 isValid x y w h p
   | (0 <= x && 0 <= y && x <= w && y <= h && not (isProcessed (x,y) p)) = True
   | otherwise = False
 
-isProcessed _ [] = False
-isProcessed (x,y) ((Point xp yp (cx, cy)):t)
-  | (x == xp && y == yp) = True
-  | otherwise = isProcessed (x,y) t
+isProcessed :: (Int, Int) -> Map (Int, Int) Bool -> Bool
+isProcessed (x,y) p
+  | (Map.member (x,y) p) = True
+  | otherwise = False
 
+pushPoints :: Seq.Seq Point -> [Point] -> Seq.Seq Point
+pushPoints q [] = q
+pushPoints q (h:t) = pushPoints (q Seq.|> h) t
 
-main :: IO ()
+printPoint :: Point -> (Int, Int, Int, Int)
+printPoint (Point x y (cx, cy)) = (x, y, cx, cy)
+
+testQueue :: (Pixel a) => Seq.Seq Point -> Map (Int, Int) Bool -> Image a -> Map (Int, Int) Bool
+testQueue q processed inImg =
+  case q of
+    -- Seq.Empty -> M.unsafeFreezeImage outImg
+    Seq.Empty -> processed
+    curr Seq.:<| ps -> do
+      let (x, y, cx, cy) = printPoint curr
+      let isIn = Map.member (x,y) processed
+      if (not isIn)
+        then do
+          
+          --let tmp = colorPixelNew curr inImg outImg
+          let p = Map.insert (x,y) True processed
+          --let nprocessed = curr:processed
+          let w = (imageWidth inImg)
+          let h = (imageHeight inImg)
+          -- let w = 50
+          -- let h = 50
+          let nbrs = generateValidNeighbours curr p w h
+          -- nbrs <- generateValidNeighbours curr nprocessed 3 3
+          -- nbrs <- generateValidNeighbours curr nprocessed 70 70
+          -- print nbrs
+          let nps = pushPoints ps nbrs
+          testQueue nps p inImg 
+          -- testQueue ps nprocessed inImg
+      else
+        testQueue ps processed inImg 
+
+voronoiArt inImg centers =
+  do
+    let queue = Seq.empty
+    let newqueue = pushPoints queue centers
+    let processed = Map.fromList []
+    -- let seq1 = Seq.empty
+    -- let seq2 = seq1 Seq.|> (Point 3 4 (3,4))
+    -- let seq3 = seq2 Seq.|> (Point 3 5 (3,5))
+    -- let p = testQueue seq3 processed inImg
+    let p = testQueue newqueue processed inImg
+    -- outImg <- M.newMutableImage (imageWidth inImg) (imageHeight inImg)
+    -- out <- M.unsafeFreezeImage outImg
+    -- result <- (savePngImage outPath . ImageYCbCr8) out
+    -- let img = writePng outPath $ generateImage (\(Point x y (cx, cy)) -> pixelAt inImg (cx cy)) (imageWidth inImg) (imageHeight inImg)
+    -- img <- writePng outPath $ generateImage (\x y -> colorAPixel x y p inImg) (imageWidth inImg) (imageHeight inImg)
+    -- let img = generateImage (\x y -> colorAPixel x y p inImg) (imageWidth inImg) (imageHeight inImg)
+    -- return img
+    -- return output
+    return (Map.member (3, 4) p) -- just here for testing purposes
+
+-- find center point of a given (x, y) from the processed points
+findPoint (x, y) [] = (x, y)
+findPoint (x,y) ((Point xp yp (cx, cy)):t)
+  | (x == xp && y == yp) = (cx, cy)
+  | otherwise = findPoint (x,y) t
+
+colorAPixel x y p inImg = let (cx, cy) = findPoint (x, y) p in pixelAt inImg cx cy
+
+-- main :: IO ()
 main = do
   [inPath, outPath] <- getArgs
   inputImage <- readImage inPath
   case inputImage of
     Left err -> putStrLn ("Could not read image: " ++ err)
     Right (ImageYCbCr8 inImg) -> 
+    -- Right inImg ->
       do
-        returned <- generateCentres 5 inImg
-        output <- voronoiArt inImg returned outPath
+        returned <- generateCentres 10 inImg
+        -- let returned = [Point 1 2 (1,2), Point 0 3 (0,3)]
+        -- print returned
+        output <- voronoiArt inImg returned
+        print output
+        --print output
+        -- savePngImage outPath output
+        -- nbrs <- generateValidNeighbours (Point 3 5 (3,5)) [] 5 5
+        -- print nbrs
         putStrLn "HELLO"
+        -- return output
   putStrLn "HELLO"
+
+-- unit tests https://hackage.haskell.org/package/HTF (maybe) -- expected results by hand. cannot have randomness.
+-- 5*5 7*7 possible center combinations!
+-- size of the image, center location, number of centres?
+-- centers next to each other
+-- centers far apart
+-- centers at corners
+-- center one of the valid neighbours
+-- multiple pixels having all 4 valid nbrs
+-- keep everything constant only change one thing at a time
+
+{-
+1. center at the very edge: centers=[(0,0)], 5*5
+2. centers right next to each other at the same edge: centers=[(0,0), (0,1)] 5*5
+3. centers right next to each other in the middle: centers=[(2,3),(3,3)], 5*5
+4. centers far apart: 
+-}
 
 {-
 seq1 = Seq.empty
@@ -101,51 +194,14 @@ seq3 = Seq.deleteAt 0 seq2
 -- unsafeFreezeImage :: (Storable (PixelBaseComponent a), PrimMonad m) => MutableImage (PrimState m) a -> m (Image a)Source
 --testQueue :: (Pixel a, PrimMonad m) => Seq.Seq Point -> [Point] -> Image a -> M.MutableImage (PrimState m) a  -> ST s (Image a)
 -- testQueue q p inImg outImg = 
-testQueue :: (Pixel a) => Seq.Seq Point -> [Point] -> Image a -> [Point]
-testQueue q p inImg =
-  case q of
-    -- Seq.Empty -> M.unsafeFreezeImage outImg
-    Seq.Empty -> p
-    curr Seq.:<| ps -> do
-      -- let res = printPoint p
-      if (not (elem curr p))
-        then do
-          let p = curr:p
-          --let tmp = colorPixelNew curr inImg outImg
-          let (x, y, cx, cy) = printPoint curr
-          -- let tmp = writePixel outImg x y (pixelAt inImg cx cy)
-          nbrs <- generateValidNeighbours curr p (imageWidth inImg) (imageHeight inImg)
-          let ps = pushPoints ps nbrs
-          testQueue ps p inImg 
-      else
-        testQueue ps p inImg 
 
-{-
-copyImg :: Image PixelRGB8 -> Image PixelRGB8
-copyImg inImg@Image {..} = runST $ do -- private piazza ? {..}
-  out <- M.newMutableImage imageWidth imageHeight
-  let colorPixel x y
-        | x >= imageWidth  = colorPixel 0 (y + 1)
-        | y >= imageHeight = M.unsafeFreezeImage out
-        | otherwise = do
-            writePixel out x y (pixelAt inImg x y)
-            colorPixel (x + 1) y
-  colorPixel 0 0
--}
-
--- copyImg :: Image PixelRGB8 -> Image PixelRGB8
--- copyImg inImg@Image {..} = runST $ do -- private piazza ? {..}
---   out <- M.newMutableImage imageWidth imageHeight
---   let colorPixel x y
---         | x >= imageWidth  = colorPixel 0 (y + 1)
---         | y >= imageHeight = M.unsafeFreezeImage out
---         | otherwise = do
---             writePixel out x y (pixelAt inImg x y)
---             colorPixel (x + 1) y
---   colorPixel 0 0
 
 -- colorPixelNew :: (Pixel a, PrimMonad m) => Point -> Image a -> M.MutableImage (PrimState m) a -> m ()
-colorPixelNew (Point x y (cx, cy)) inImg outImg = writePixel outImg x y (pixelAt inImg cx cy)
+-- colorPixelNew (Point x y (cx, cy)) inImg outImg = writePixel outImg x y (pixelAt inImg cx cy)
+
+--let tmp = colorPixelNew curr inImg outImg
+          -- let (x, y, cx, cy) = printPoint curr
+          -- let tmp = writePixel outImg x y (pixelAt inImg cx cy)
 
 -- createImg :: (Control.Monad.Primitive.PrimMonad m) => Image PixelYCbCr8 -> m (Image PixelYCbCr8)
 -- createImg inImg = do
@@ -153,19 +209,11 @@ colorPixelNew (Point x y (cx, cy)) inImg outImg = writePixel outImg x y (pixelAt
 --   colorPixel 10 100 inImg outImg
 --   M.unsafeFreezeImage outImg
 
---voronoiArt :: Image PixelYCbCr8 -> [Point] -> [Point]
-voronoiArt inImg centers outPath =
-  do
-    let queue = Seq.empty
-    let queue = pushPoints queue centers
-    let processed = []
-    let p = testQueue queue processed inImg
-    -- outImg <- M.newMutableImage (imageWidth inImg) (imageHeight inImg)
-    let a = colorPoints outImg inImg p
-    -- out <- M.unsafeFreezeImage outImg
-    -- result <- (savePngImage outPath . ImageYCbCr8) out
-    let img = writePng outPath $ generateImage (\(Point x y (cx, cy)) -> pixelAt inImg (cx cy)) (imageWidth inImg) (imageHeight inImg)
-    return (result)
+
+
+-- voronoiArt :: (Monad m, Pixel a) => Image a -> [Point] -> m (Image a)
+-- voronoiArt :: (Monad m) => (Image PixelYCbCr8) -> [Point] -> m (Image PixelYCbCr8)
+
 
 -- imageCreator path = writePng path $ generateImage pixelRenderer 250 300
 --    where pixelRenderer x y = PixelRGB8 (fromIntegral x) (fromIntegral y) 128
@@ -180,18 +228,6 @@ voronoiArt inImg centers outPath =
 --     colorPoints outImg inImg t
 
 
-
-{-
-args <- getArgs
-case length args of
-    0 -> putStrLn "No Arguments, exiting"
-    otherwise -> do
-        other
-        methods
-        here
--}
-
-
 {-
 *Main> seq1 = Seq.empty
 *Main> seq2 = seq1 Seq.|> (Point 3 4 (3,4))
@@ -202,13 +238,10 @@ fromList [Point 3 4 (3,4),Point 3 5 (3,5)]
 [Point 3 4 (3,4),Point 3 5 (3,5)]
 -}
 
-printPoint :: Point -> (Int, Int, Int, Int)
-printPoint (Point x y (cx, cy)) = (x, y, cx, cy)
-
-colorPixel :: (Pixel a, PrimMonad m) => Int -> Int -> Image a -> M.MutableImage (PrimState m) a -> m ()
-colorPixel x y inImg outImg = writePixel outImg x y (pixelAt inImg x y)
 
 
+-- colorPixel :: (Pixel a, PrimMonad m) => Int -> Int -> Image a -> M.MutableImage (PrimState m) a -> m ()
+-- colorPixel x y inImg outImg = writePixel outImg x y (pixelAt inImg x y)
 
 -- createImg :: (Control.Monad.Primitive.PrimMonad m) => Image PixelYCbCr8 -> m (Image PixelYCbCr8)
 -- createImg inImg = do
@@ -216,9 +249,7 @@ colorPixel x y inImg outImg = writePixel outImg x y (pixelAt inImg x y)
 --   colorPixel 10 100 inImg outImg
 --   M.unsafeFreezeImage outImg
 
-pushPoints :: Seq.Seq Point -> [Point] -> Seq.Seq Point
-pushPoints q [] = q
-pushPoints q (h:t) = pushPoints (q Seq.|> h) t
+
 
 -- genRandomNumbersBetween 5 2 (1,10)
 
