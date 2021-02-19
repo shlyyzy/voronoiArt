@@ -15,7 +15,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 
 -- :set args "/Users/Shirley/Desktop/voronoiArt/img/img1.JPG" "/Users/Shirley/Desktop/voronoiArt/img/img1out.JPG"
--- :set args "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img1.JPG" "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img1-out.JPG"
+-- :set args "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img2.jpg" "/Users/gokcedilek/Desktop/courses/cpsc312/voronoiArt/img/img2-out.jpg" 55
 -- data Point x y () = Point 
 data Point = Point Int Int (Int, Int)
       deriving (Show)
@@ -27,14 +27,6 @@ rand x = do
   r <- randomRIO (1, x)
   return r
 
-{-
-*Main> seq1 = Data.Sequence.empty
-*Main> seq1 Data.Sequence.|> (Point 3 4 (3,4))
-fromList [Point 3 4 (3,4)]
-*Main> it Data.Sequence.|> (Point 3 5 (3,5))
-fromList [Point 3 4 (3,4),Point 3 5 (3,5)]
--}
-
 genRandomNumbersBetween :: Int -> Int -> (Int, Int) -> [Int]
 genRandomNumbersBetween n seed (a, b) = Prelude.take n $ (randomRs (a, b) myGenerator) where
     myGenerator = mkStdGen seed
@@ -43,31 +35,28 @@ generateCentres n inImg =
   do
     r1 <- rand 100000
     r2 <- rand 100000
-    let rs = genRandomNumbersBetween n r1 (0,(imageWidth inImg))
-    let ms = genRandomNumbersBetween n r2 (0,(imageHeight inImg))
-    -- let rs = genRandomNumbersBetween n r1 (0,50)
-    -- let ms = genRandomNumbersBetween n r2 (0,50)
+    let rs = genRandomNumbersBetween n r1 (0,((imageWidth inImg)-1))
+    let ms = genRandomNumbersBetween n r2 (0,((imageHeight inImg)-1))
     let both = Prelude.zip rs ms
     let output = [(Point x y (x,y)) | (x,y) <- both]
     return (output)
 
 -- generateValidNeighbours :: Point -> [Point] -> Int -> Int -> [Point]
-generateValidNeighbours :: Point -> Map (Int, Int) Bool -> Int -> Int -> [Point]
+-- generateValidNeighbours :: Point -> Map (Int, Int) Bool -> Int -> Int -> [Point]
+generateValidNeighbours :: Point -> Map (Int, Int) (Int, Int) -> Int -> Int -> [Point]
 generateValidNeighbours (Point x y (cx, cy)) processed w h =
   do
     let temp = [(x+1,y), (x-1, y), (x,y+1), (x, y-1)]
     let valid = [Point tx ty (cx, cy) | (tx,ty) <- temp, (isValid tx ty w h processed)]
-    -- let temp = [(1,2), (3, 4), (5,6), (7, 8)]
-    -- let valid = [Point tx ty (cx, cy) | (tx,ty) <- temp]
     valid
 
 --isValid :: Int -> Int -> Int -> Int -> [Point] -> Boolean
-isValid :: Int -> Int -> Int -> Int -> Map (Int, Int) Bool -> Bool
+isValid :: Int -> Int -> Int -> Int -> Map (Int, Int) (Int, Int) -> Bool
 isValid x y w h p
-  | (0 <= x && 0 <= y && x <= w && y <= h && not (isProcessed (x,y) p)) = True
+  | (0 <= x && 0 <= y && x < w && y < h && not (isProcessed (x,y) p)) = True
   | otherwise = False
 
-isProcessed :: (Int, Int) -> Map (Int, Int) Bool -> Bool
+isProcessed :: (Int, Int) -> Map (Int, Int) (Int, Int) -> Bool
 isProcessed (x,y) p
   | (Map.member (x,y) p) = True
   | otherwise = False
@@ -79,30 +68,26 @@ pushPoints q (h:t) = pushPoints (q Seq.|> h) t
 printPoint :: Point -> (Int, Int, Int, Int)
 printPoint (Point x y (cx, cy)) = (x, y, cx, cy)
 
-testQueue :: (Pixel a) => Seq.Seq Point -> Map (Int, Int) Bool -> Image a -> Map (Int, Int) Bool
+testQueue :: (Pixel a) => Seq.Seq Point -> Map (Int, Int) (Int, Int) -> Image a -> Map (Int, Int) (Int, Int)
 testQueue q processed inImg =
   case q of
-    -- Seq.Empty -> M.unsafeFreezeImage outImg
     Seq.Empty -> processed
     curr Seq.:<| ps -> do
       let (x, y, cx, cy) = printPoint curr
       let isIn = Map.member (x,y) processed
       if (not isIn)
         then do
-          
-          --let tmp = colorPixelNew curr inImg outImg
-          let p = Map.insert (x,y) True processed
+          -- let p = Map.insert (x,y) True processed
+          let nprocessed = Map.insert (x, y) (cx, cy) processed
           --let nprocessed = curr:processed
           let w = (imageWidth inImg)
           let h = (imageHeight inImg)
-          -- let w = 50
-          -- let h = 50
-          let nbrs = generateValidNeighbours curr p w h
+          let nbrs = generateValidNeighbours curr nprocessed w h
           -- nbrs <- generateValidNeighbours curr nprocessed 3 3
           -- nbrs <- generateValidNeighbours curr nprocessed 70 70
           -- print nbrs
           let nps = pushPoints ps nbrs
-          testQueue nps p inImg 
+          testQueue nps nprocessed inImg 
           -- testQueue ps nprocessed inImg
       else
         testQueue ps processed inImg 
@@ -117,44 +102,36 @@ voronoiArt inImg centers =
     -- let seq3 = seq2 Seq.|> (Point 3 5 (3,5))
     -- let p = testQueue seq3 processed inImg
     let p = testQueue newqueue processed inImg
-    -- outImg <- M.newMutableImage (imageWidth inImg) (imageHeight inImg)
-    -- out <- M.unsafeFreezeImage outImg
-    -- result <- (savePngImage outPath . ImageYCbCr8) out
-    -- let img = writePng outPath $ generateImage (\(Point x y (cx, cy)) -> pixelAt inImg (cx cy)) (imageWidth inImg) (imageHeight inImg)
-    -- img <- writePng outPath $ generateImage (\x y -> colorAPixel x y p inImg) (imageWidth inImg) (imageHeight inImg)
-    -- let img = generateImage (\x y -> colorAPixel x y p inImg) (imageWidth inImg) (imageHeight inImg)
     -- return img
     -- return output
-    return (Map.member (3, 4) p) -- just here for testing purposes
+    return p
+    -- return (Map.member (3, 4) p) -- just here for testing purposes
 
--- find center point of a given (x, y) from the processed points
-findPoint (x, y) [] = (x, y)
-findPoint (x,y) ((Point xp yp (cx, cy)):t)
-  | (x == xp && y == yp) = (cx, cy)
-  | otherwise = findPoint (x,y) t
+findPoint (x, y) p 
+  | isProcessed (x, y) p = Map.lookup (x, y) p
+  | otherwise = Nothing -- shouldn't happen!
 
-colorAPixel x y p inImg = let (cx, cy) = findPoint (x, y) p in pixelAt inImg cx cy
+colorAPixel :: (Pixel a) => (Int, Int) -> Map (Int, Int) (Int, Int) -> Image a -> a
+colorAPixel (x, y) p inImg = case findPoint (x, y) p of
+  Just (cx, cy) -> pixelAt inImg cx cy
+  Nothing -> pixelAt inImg x y -- shouldn't happen!
+-- colorAPixel (x, y) p = case findPoint (x, y) p of
+--   Just (cx, cy) -> (cx, cy)
+--   Nothing -> (x, y) -- shouldn't happen!
 
 -- main :: IO ()
 main = do
-  [inPath, outPath] <- getArgs
+  [inPath, outPath, nc] <- getArgs
   inputImage <- readImage inPath
   case inputImage of
     Left err -> putStrLn ("Could not read image: " ++ err)
     Right (ImageYCbCr8 inImg) -> 
-    -- Right inImg ->
       do
-        returned <- generateCentres 10 inImg
-        -- let returned = [Point 1 2 (1,2), Point 0 3 (0,3)]
-        -- print returned
-        output <- voronoiArt inImg returned
-        print output
-        --print output
-        -- savePngImage outPath output
-        -- nbrs <- generateValidNeighbours (Point 3 5 (3,5)) [] 5 5
-        -- print nbrs
-        putStrLn "HELLO"
-        -- return output
+        returned <- generateCentres (read nc) inImg
+        output <- voronoiArt inImg returned      
+        let outImg = generateImage (\x y -> colorAPixel (x, y) output inImg) (imageWidth inImg) (imageHeight inImg)
+        result <- (savePngImage outPath . ImageYCbCr8) outImg
+        putStrLn "hello"
   putStrLn "HELLO"
 
 -- unit tests https://hackage.haskell.org/package/HTF (maybe) -- expected results by hand. cannot have randomness.
