@@ -13,7 +13,7 @@ import Control.Monad.Primitive
 import Data.Map (Map)
 import qualified Data.Map as Map
 
--- Program written by Gokce Dilek and Shirley Yang
+-- Program written by Gokce Dilek and Shirley Yang for CPSC 312
 
 -- 1) To run this program, add your initial image to the img/ folder
 -- 2) Once you run stack build and stack ghci, set your args like below:
