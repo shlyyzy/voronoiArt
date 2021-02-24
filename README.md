@@ -1,6 +1,6 @@
 # Voronoi Art
 
-Given an input image, and the number of voronoi partitions to create, we will implement a flood fill algorithm starting from a randomly generated set of center coordinates in the image to create the specified number of partitions in the image, resulting in interesting artistic results where every pixel in a given voronoi partition have the same color.
+Given an input image, and the number of voronoi partitions to create, this program imitates a flood fill algorithm starting from a randomly generated set of center coordinates in the image to create the specified number of partitions in the image. The results are interesting artistic images where every pixel in a given voronoi partition have the same color.
 
 ## How to run
 
