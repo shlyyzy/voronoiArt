@@ -12,11 +12,15 @@ Given an input image, and the number of voronoi partitions to create, we will im
   - `main`
 
 ## Examples!
-#### Original
-<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1.JPG" width="400">
-<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-10out.JPG" width="400">
-<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-100out.JPG" width="400">
-<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-10000out.JPG" width="400">
-<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-1000000out.JPG" width="400">
+### Original
+<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1.JPG" width="400"></img>
+-------------------
+<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-10out.JPG" width="400"> 10 Centers</img>
+
+<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-100out.JPG" width="400">100 Centers</img>
+
+<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-10000out.JPG" width="400">10 000 Centers</img>
+
+<img src="https://github.com/shlyyzy/voronoiArt/blob/main/img/img1-1000000out.JPG" width="400">10 000 000 Centers</img>
 
 
